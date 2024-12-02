@@ -28,7 +28,12 @@ def adjust_opacity(image: Image.Image, opacity: float) -> Image.Image:
 
     return image
 
-def add_watermark(target_image_path: str, watermark_image_path: str, output_image_path: str) -> None:
+
+def add_watermark(
+    target_image_path: str,
+    watermark_image_path: str,
+    output_image_path: str,
+) -> None:
     """
     Add a watermark to the target image.
 
@@ -42,16 +47,16 @@ def add_watermark(target_image_path: str, watermark_image_path: str, output_imag
     watermark_image = Image.open(watermark_image_path)
 
     # Adjust the opacity of the watermark image
-    watermark_image = adjust_opacity(watermark_image, 0.5)  # Set opacity to 50%
-
+    watermark_image = adjust_opacity(watermark_image, 1)  # Set opacity to 50%
 
     # Resize the watermark image if needed
     # You can adjust the size as per your requirements
-    #watermark_image = watermark_image.resize((200, 200))
+    # watermark_image = watermark_image.resize((200, 200))
 
     # Define the position where the watermark will be placed
     # Adjust the values to change the position
-    position = (target_image.width - watermark_image.width - 10, target_image.height - watermark_image.height - 10)
+    # position = (target_image.width - watermark_image.width - 10, target_image.height - watermark_image.height - 10)
+    position = (40, target_image.height - watermark_image.height - 250)
 
     # Blend the watermark image with the target image using alpha blending
     target_image.paste(watermark_image, position, mask=watermark_image)
@@ -61,10 +66,12 @@ def add_watermark(target_image_path: str, watermark_image_path: str, output_imag
 
 
 @click.command()
-@click.argument('target_image_path', type=click.Path(exists=True))
-@click.argument('watermark_image_path', type=click.Path(exists=True))
-@click.argument('output_image_path', type=click.Path())
-def main(target_image_path: str, watermark_image_path: str, output_image_path: str) -> None:
+@click.argument("target_image_path", type=click.Path(exists=True))
+@click.argument("watermark_image_path", type=click.Path(exists=True))
+@click.argument("output_image_path", type=click.Path())
+def main(
+    target_image_path: str, watermark_image_path: str, output_image_path: str
+) -> None:
     """
     Add a watermark to an image.
 
@@ -80,5 +87,5 @@ def main(target_image_path: str, watermark_image_path: str, output_image_path: s
     add_watermark(target_image_path, watermark_image_path, output_image_path)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
