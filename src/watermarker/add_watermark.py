@@ -1,6 +1,13 @@
+from typing import Final
+
 import click
 from pathlib import Path
 from PIL import Image, ImageEnhance
+
+# TODO:THS:2024-12-02: Add
+
+WM_OPACITY: Final[float] = 1.0
+"""Opacity of the watermark applied to a image."""
 
 
 def adjust_opacity(image: Image.Image, opacity: float) -> Image.Image:
@@ -30,24 +37,25 @@ def adjust_opacity(image: Image.Image, opacity: float) -> Image.Image:
 
 
 def add_watermark(
-    target_image_path: str,
-    watermark_image_path: str,
-    output_image_path: str,
+    target_image_path: Path,
+    watermark_image_path: Path,
+    output_image_path: Path,
+    opacity: float = WM_OPACITY,
 ) -> None:
     """
     Add a watermark to the target image.
 
     Args:
-        target_image_path (str): Path to the target image.
-        watermark_image_path (str): Path to the watermark image.
-        output_image_path (str): Path to store the resulting image.
+        target_image_path: Path to the target image.
+        watermark_image_path: Path to the watermark image.
+        output_image_path: Path to store the resulting image.
     """
     # Open the target image and the watermark image
     target_image = Image.open(target_image_path)
     watermark_image = Image.open(watermark_image_path)
 
     # Adjust the opacity of the watermark image
-    watermark_image = adjust_opacity(watermark_image, 1)  # Set opacity to 50%
+    watermark_image = adjust_opacity(image=watermark_image, opacity=opacity)
 
     # Resize the watermark image if needed
     # You can adjust the size as per your requirements
@@ -66,25 +74,36 @@ def add_watermark(
 
 
 @click.command()
-@click.argument("target_image_path", type=click.Path(exists=True))
-@click.argument("watermark_image_path", type=click.Path(exists=True))
-@click.argument("output_image_path", type=click.Path())
+@click.argument("target_image_path", type=click.Path(exists=True, path_type=Path))
+@click.argument("watermark_image_path", type=click.Path(exists=True, path_type=Path))
+@click.argument("output_image_path", type=click.Path(path_type=Path))
+@click.option(
+    "--opacity",
+    type=float,
+    default=WM_OPACITY,
+    show_default=True,
+    help="Opacity of the watermark (0.0 to 1.0).",
+)
 def main(
-    target_image_path: str, watermark_image_path: str, output_image_path: str
+    target_image_path: Path,
+    watermark_image_path: Path,
+    output_image_path: Path,
+    opacity: float,
 ) -> None:
     """
     Add a watermark to an image.
 
     Args:
-        target_image_path (str): Path to the target image.
-        watermark_image_path (str): Path to the watermark image.
-        output_image_path (str): Path to store the resulting image.
+        target_image_path: Path to the target image.
+        watermark_image_path: Path to the watermark image.
+        output_image_path: Path to store the resulting image.
     """
-    target_image_path = Path(target_image_path)
-    watermark_image_path = Path(watermark_image_path)
-    output_image_path = Path(output_image_path)
-
-    add_watermark(target_image_path, watermark_image_path, output_image_path)
+    add_watermark(
+        target_image_path=target_image_path,
+        watermark_image_path=watermark_image_path,
+        output_image_path=output_image_path,
+        opacity=opacity,
+    )
 
 
 if __name__ == "__main__":
