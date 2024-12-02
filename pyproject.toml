@@ -5,6 +5,9 @@ description = ""
 authors = ["thorgeir <thorgeirsigurd@gmail.com>"]
 readme = "README.md"
 
+[tool.poetry.scripts]
+add-watermark = "watermarker.add_watermark:main"
+
 [tool.poetry.dependencies]
 python = "^3.11"
 Pillow = "^10.0.0"
