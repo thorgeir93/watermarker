@@ -5,10 +5,10 @@ from add_watermark import add_watermark
 
 
 @click.command()
-@click.argument('target_directory', type=click.Path(exists=True))
-@click.argument('watermark_path', type=click.Path(exists=True))
-@click.argument('output_directory', type=click.Path())
-def apply_watermark_to_images(target_directory: str, watermark_path: str, output_directory: str) -> None:
+@click.argument('target_directory', type=click.Path(exists=True, path_type=Path))
+@click.argument('watermark_path', type=click.Path(exists=True, path_type=Path))
+@click.argument('output_directory', type=click.Path(path_type=Path))
+def apply_watermark_to_images(target_directory: Path, watermark_path: Path, output_directory: Path) -> None:
     """
     Apply a watermark to a directory of images.
 
@@ -17,8 +17,6 @@ def apply_watermark_to_images(target_directory: str, watermark_path: str, output
         watermark_path (str): Path to the watermark image.
         output_directory (str): Path to store the resulting watermarked images.
     """
-    target_directory = Path(target_directory)
-    output_directory = Path(output_directory)
     output_directory.mkdir(parents=True, exist_ok=True)
 
     for file in target_directory.glob("*.jpg"):

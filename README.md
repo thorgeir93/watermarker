@@ -44,3 +44,10 @@ poetry run python src/watermarker/watermarker.py <target_directory> <watermark_p
 5. After the script finishes running, check the output directory for the watermarked images.
 
 Make sure to replace `<target_directory>`, `<watermark_path>`, and `<output_directory>` in the command with the appropriate paths for your use case.
+
+# Development
+
+## MyPy
+```
+poetry run mypy --no-namespace-packages .
+```

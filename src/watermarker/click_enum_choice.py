@@ -5,7 +5,11 @@ the click.EnumChoice will be available.
     - Implementation: https://github.com/pallets/click/pull/2272
     - Release plan: https://github.com/pallets/click/issues/2789
 """
+from enum import Enum
+from typing import Any
+
 import click
+from click import Context, Parameter
 
 
 class EnumChoice(click.Choice):
@@ -13,11 +17,11 @@ class EnumChoice(click.Choice):
     directly into the corresponding enum value.
     """
 
-    def __init__(self, enum_type):
+    def __init__(self, enum_type: type[Enum]) -> None:
         self.enum_type = enum_type
         super().__init__([e.value for e in enum_type], case_sensitive=False)
 
-    def convert(self, value, param, ctx):
+    def convert(self, value: Any, param: Parameter | None, ctx: Context | None) -> Any:
         # Convert the string to the corresponding enum
         value = super().convert(value, param, ctx)  # Validates the choice
         return self.enum_type(value)  # Convert string to enum

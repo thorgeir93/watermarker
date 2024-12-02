@@ -8,6 +8,11 @@ readme = "README.md"
 [tool.poetry.scripts]
 add-watermark = "watermarker.add_watermark:main"
 
+# [tool.mypy]
+# files = ["src/"]
+# no_namespace_packages = true
+
+
 [tool.poetry.dependencies]
 python = "^3.11"
 Pillow = "^10.0.0"

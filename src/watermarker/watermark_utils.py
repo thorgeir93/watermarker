@@ -1,6 +1,6 @@
 from PIL.Image import Image
 
-from src.watermarker.enum import WatermarkPosition
+from src.watermarker.enums import WatermarkPosition
 
 def adjust_opacity(image: Image, opacity: float) -> Image:
     """
@@ -14,17 +14,17 @@ def adjust_opacity(image: Image, opacity: float) -> Image:
         Image.Image: The image with adjusted opacity.
     """
     # Ensure the image has an alpha channel
-    image: Image = image.convert("RGBA")
+    image_rgba: Image = image.convert("RGBA")
 
     # Extract the alpha channel
-    alpha = image.split()[3]
+    alpha = image_rgba.split()[3]
 
     # Adjust the opacity
     alpha = alpha.point(lambda p: p * opacity)
 
     # Apply the adjusted alpha channel to the image
-    image.putalpha(alpha)
-    return image
+    image_rgba.putalpha(alpha)
+    return image_rgba
 
 
 def calculate_position(

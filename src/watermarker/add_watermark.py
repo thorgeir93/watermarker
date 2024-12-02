@@ -6,7 +6,7 @@ from pathlib import Path
 from PIL import Image
 
 from src.watermarker.click_enum_choice import EnumChoice
-from src.watermarker.enum import WatermarkPosition
+from src.watermarker.enums import WatermarkPosition
 from src.watermarker.watermark_utils import adjust_opacity, calculate_position
 
 DEFAULT_OPACITY: Final[float] = 1.0
