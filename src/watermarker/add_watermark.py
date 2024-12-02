@@ -1,34 +1,28 @@
-from enum import StrEnum
 from functools import lru_cache
 from typing import Final
 
 import click
 from pathlib import Path
-from PIL import Image, ImageEnhance
+from PIL import Image
 
 from src.watermarker.click_enum_choice import EnumChoice
+from src.watermarker.enum import WatermarkPosition
+from src.watermarker.watermark_utils import adjust_opacity, calculate_position
 
-# TODO:THS:2024-12-02: Add
-
-WM_OPACITY: Final[float] = 1.0
+DEFAULT_OPACITY: Final[float] = 1.0
 """Opacity of the watermark applied to a image."""
 
-WM_DEFAULT_PADDING: Final[int] = 20
+DEFAULT_PADDING: Final[int] = 20
 """Default padding in pixels."""
 
-
-class WatermarkPosition(StrEnum):
-    BOTTOM_RIGHT = "bottom-right"
-    BOTTOM_LEFT = "bottom-left"
-    TOP_RIGHT = "top-right"
-    TOP_LEFT = "top-left"
-    CENTER = "center"
+DEFAULT_POSITION: Final[int] = 20
+"""Default padding in pixels."""
 
 
 def validate_image_and_watermark(
     target_image: Image.Image,
     watermark_image: Image.Image,
-    padding: int = WM_DEFAULT_PADDING,
+    padding: int = DEFAULT_PADDING,
 ) -> bool:
     """Validate that the target image is large enough to accommodate the watermark and padding.
 
@@ -48,56 +42,6 @@ def validate_image_and_watermark(
     return True
 
 
-def calculate_position(
-    target_image: Image.Image,
-    watermark_image: Image.Image,
-    position: WatermarkPosition,
-    padding: int = WM_DEFAULT_PADDING,
-) -> tuple[int, int]:
-    """
-    Calculate the position to place the watermark on the target image.
-
-    Args:
-        target_image (Image.Image): The target image.
-        watermark_image (Image.Image): The watermark image.
-        position (WatermarkPosition): The desired position for the watermark.
-        padding (int): Padding around the watermark.
-
-    Returns:
-        tuple: (x, y) coordinates for the watermark.
-    """
-    match position:
-        case WatermarkPosition.BOTTOM_RIGHT:
-            return (
-                max(0, target_image.width - watermark_image.width - padding),
-                max(0, target_image.height - watermark_image.height - padding),
-            )
-        case WatermarkPosition.BOTTOM_LEFT:
-            return (
-                padding,
-                max(0, target_image.height - watermark_image.height - padding),
-            )
-        case WatermarkPosition.TOP_RIGHT:
-            return (
-                max(0, target_image.width - watermark_image.width - padding),
-                padding,
-            )
-        case WatermarkPosition.TOP_LEFT:
-            return (padding, padding)
-        case WatermarkPosition.CENTER:
-            return (
-                (target_image.width - watermark_image.width) // 2,
-                (target_image.height - watermark_image.height) // 2,
-            )
-        case _:
-            # Default to bottom-right if an invalid position is provided
-            return (
-                max(0, target_image.width - watermark_image.width - padding),
-                max(0, target_image.height - watermark_image.height - padding),
-            )
-
-
-# Cache the watermark image with adjusted opacity
 @lru_cache(maxsize=1)
 def load_cached_watermark(watermark_path: Path, opacity: float) -> Image.Image:
     """Load and cache the watermark image with the specified opacity.
@@ -113,53 +57,29 @@ def load_cached_watermark(watermark_path: Path, opacity: float) -> Image.Image:
     return adjust_opacity(image=watermark_image, opacity=opacity)
 
 
-def adjust_opacity(image: Image.Image, opacity: float) -> Image.Image:
-    """
-    Adjust the opacity of an image.
-
-    Args:
-        image (Image.Image): The input image.
-        opacity (float): The desired opacity, ranging from 0.0 (transparent) to 1.0 (opaque).
-
-    Returns:
-        Image.Image: The image with adjusted opacity.
-    """
-    # Ensure the image has an alpha channel
-    image = image.convert("RGBA")
-
-    # Extract the alpha channel
-    alpha = image.split()[3]
-
-    # Adjust the opacity
-    alpha = alpha.point(lambda p: p * opacity)
-
-    # Apply the adjusted alpha channel to the image
-    image.putalpha(alpha)
-
-    return image
-
-
 def add_watermark(
     target_image_path: Path,
     watermark_image_path: Path,
     output_image_path: Path,
-    opacity: float = WM_OPACITY,
+    opacity: float = DEFAULT_OPACITY,
     position: WatermarkPosition = WatermarkPosition.BOTTOM_RIGHT,
-    padding: int = WM_DEFAULT_PADDING,
+    padding: int = DEFAULT_PADDING,
 ) -> None:
-    """
-    Add a watermark to the target image.
+    """Add a watermark to the target image.
 
     Args:
         target_image_path: Path to the target image.
         watermark_image_path: Path to the watermark image.
         output_image_path: Path to store the resulting image.
+        opacity: The opacity level of the watermark. Must be a float
+                 between 0 (completely transparent) and 1 (completely opaque).
+        position: The position of the watermark on the target image.
+                  Defaults to `WatermarkPosition.BOTTOM_RIGHT`.
+        padding: The padding (in pixels) between the watermark and the
+                 edges of the target image.
     """
-    # Open the target image and the watermark image
-    target_image = Image.open(target_image_path)
-    watermark_image = load_cached_watermark(watermark_image_path, opacity)
-
-    # TODO: Add padding
+    target_image: Image.Image = Image.open(target_image_path)
+    watermark_image: Image.Image = load_cached_watermark(watermark_image_path, opacity)
 
     # Validate image and watermark dimensions
     if not validate_image_and_watermark(target_image, watermark_image, padding):
@@ -167,8 +87,11 @@ def add_watermark(
             "The target image is too small to accommodate the watermark and padding."
         )
 
+    if opacity > 1.0 or opacity < 0.0:
+        raise ValueError(f"Opacity value {opacity} is invalid.")
+
     # Calculate the position for the watermark
-    watermark_position = calculate_position(
+    position_x_y: tuple[int, int] = calculate_position(
         target_image=target_image,
         watermark_image=watermark_image,
         position=position,
@@ -176,9 +99,7 @@ def add_watermark(
     )
 
     # Blend the watermark image with the target image using alpha blending
-    target_image.paste(watermark_image, watermark_position, mask=watermark_image)
-
-    # Save the resulting image
+    target_image.paste(watermark_image, position_x_y, mask=watermark_image)
     target_image.save(output_image_path)
 
 
@@ -189,7 +110,7 @@ def add_watermark(
 @click.option(
     "--opacity",
     type=float,
-    default=WM_OPACITY,
+    default=DEFAULT_OPACITY,
     show_default=True,
     help="Opacity of the watermark (0.0 to 1.0).",
 )
@@ -204,7 +125,7 @@ def add_watermark(
     ),
     show_default=True,
 )
-@click.option("--padding", type=int, default=WM_DEFAULT_PADDING, show_default=True)
+@click.option("--padding", type=int, default=DEFAULT_PADDING, show_default=True)
 def main(
     target_image_path: Path,
     watermark_image_path: Path,
@@ -219,6 +140,12 @@ def main(
         target_image_path: Path to the target image.
         watermark_image_path: Path to the watermark image.
         output_image_path: Path to store the resulting image.
+        opacity: The opacity level of the watermark. Must be a float
+                 between 0 (completely transparent) and 1 (completely opaque).
+        position: The position of the watermark on the target image.
+                  Defaults to `WatermarkPosition.BOTTOM_RIGHT`.
+        padding: The padding (in pixels) between the watermark and the
+                 edges of the target image.
     """
     try:
         add_watermark(
@@ -231,7 +158,6 @@ def main(
         )
     except ValueError as error:
         click.echo(f"Error: {error}")
-        raise
 
 
 if __name__ == "__main__":
