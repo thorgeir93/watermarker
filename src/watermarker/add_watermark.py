@@ -15,8 +15,8 @@ DEFAULT_OPACITY: Final[float] = 1.0
 DEFAULT_PADDING: Final[int] = 20
 """Default padding in pixels."""
 
-DEFAULT_POSITION: Final[int] = 20
-"""Default padding in pixels."""
+DEFAULT_POSITION: Final[WatermarkPosition] = WatermarkPosition.BOTTOM_RIGHT
+"""Default watermark position on the image."""
 
 
 def validate_image_and_watermark(
