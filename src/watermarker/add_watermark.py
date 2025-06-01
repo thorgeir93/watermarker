@@ -7,7 +7,7 @@ from PIL import Image
 
 from src.watermarker.click_enum_choice import EnumChoice
 from src.watermarker.enums import WatermarkPosition
-from src.watermarker.watermark_utils import adjust_opacity, calculate_position
+from src.watermarker.watermark_utils import adjust_opacity, calculate_position, scale_watermark
 
 DEFAULT_OPACITY: Final[float] = 1.0
 """Opacity of the watermark applied to a image."""
@@ -17,6 +17,8 @@ DEFAULT_PADDING: Final[int] = 20
 
 DEFAULT_POSITION: Final[WatermarkPosition] = WatermarkPosition.BOTTOM_RIGHT
 """Default watermark position on the image."""
+
+DEFAULT_WATERMARK_SCALE_RATIO = 0.1
 
 
 def validate_image_and_watermark(
@@ -64,6 +66,7 @@ def add_watermark(
     opacity: float = DEFAULT_OPACITY,
     position: WatermarkPosition = WatermarkPosition.BOTTOM_RIGHT,
     padding: int = DEFAULT_PADDING,
+    watermark_scale_ratio: float = DEFAULT_WATERMARK_SCALE_RATIO,
 ) -> None:
     """Add a watermark to the target image.
 
@@ -89,6 +92,9 @@ def add_watermark(
 
     if opacity > 1.0 or opacity < 0.0:
         raise ValueError(f"Opacity value {opacity} is invalid.")
+
+    # Scale the watermark
+    watermark_image = scale_watermark(target_image, watermark_image, scale_ratio=watermark_scale_ratio)
 
     # Calculate the position for the watermark
     position_x_y: tuple[int, int] = calculate_position(
@@ -137,9 +143,9 @@ def main(
     """Add a watermark to an image.
 
     Args:
-        target_image_path: Path to the target image.
+        target_image_path: Path to the target image or Folder.
         watermark_image_path: Path to the watermark image.
-        output_image_path: Path to store the resulting image.
+        output_image_path: Path to store the resulting image, can be file or folder.
         opacity: The opacity level of the watermark. Must be a float
                  between 0 (completely transparent) and 1 (completely opaque).
         position: The position of the watermark on the target image.
@@ -147,17 +153,36 @@ def main(
         padding: The padding (in pixels) between the watermark and the
                  edges of the target image.
     """
-    try:
-        add_watermark(
-            target_image_path=target_image_path,
-            watermark_image_path=watermark_image_path,
-            output_image_path=output_image_path,
-            opacity=opacity,
-            position=position,
-            padding=padding,
-        )
-    except ValueError as error:
-        click.echo(f"Error: {error}")
+    # TODO: validate path inputs, if working with folders, ensure output path is a folder etc.
+    if target_image_path.is_dir():
+        for image_path in target_image_path.glob("*"):
+            watermarked_output_image_path = output_image_path / f"watermarked_{image_path.name}"
+            try:
+                add_watermark(
+                    target_image_path=image_path,
+                    watermark_image_path=watermark_image_path,
+                    output_image_path=watermarked_output_image_path,
+                    opacity=opacity,
+                    position=position,
+                    padding=padding,
+                    watermark_scale_ratio=DEFAULT_WATERMARK_SCALE_RATIO,
+                )
+                click.echo(f"Watermark added to {image_path.name}")
+            except ValueError as error:
+                click.echo(f"Error processing {image_path.name}: {error}")
+    else:
+        try:
+            add_watermark(
+                target_image_path=target_image_path,
+                watermark_image_path=watermark_image_path,
+                output_image_path=output_image_path,
+                opacity=opacity,
+                position=position,
+                padding=padding,
+                watermark_scale_ratio=DEFAULT_WATERMARK_SCALE_RATIO,
+            )
+        except ValueError as error:
+            click.echo(f"Error: {error}")
 
 
 if __name__ == "__main__":
