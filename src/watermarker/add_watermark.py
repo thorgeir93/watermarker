@@ -116,8 +116,13 @@ def add_watermark(
     )
 
     # Blend the watermark image with the target image using alpha blending
+    exif_data = target_image.info.get("exif")
     target_image.paste(watermark_image, position_x_y, mask=watermark_image)
-    target_image.save(output_image_path)
+
+    if exif_data:
+        target_image.save(output_image_path, exif=exif_data)
+    else:
+        target_image.save(output_image_path)
 
 
 @click.command()
