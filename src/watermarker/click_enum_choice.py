@@ -5,6 +5,7 @@ the click.EnumChoice will be available.
     - Implementation: https://github.com/pallets/click/pull/2272
     - Release plan: https://github.com/pallets/click/issues/2789
 """
+
 from enum import Enum
 from typing import Any
 

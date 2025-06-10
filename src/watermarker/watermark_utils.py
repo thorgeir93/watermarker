@@ -1,31 +1,38 @@
 from PIL.Image import Image
 from PIL.Image import Resampling
+from PIL import Image as PILImage
 
 from src.watermarker.enums import WatermarkPosition
 
-def adjust_opacity(image: Image, opacity: float) -> Image:
+
+def adjust_opacity(
+    image: Image, opacity: float, color: tuple[int, int, int] | None = None
+) -> Image:
     """
-    Adjust the opacity of an image.
+    Adjust the opacity and optionally tint the watermark image.
 
     Args:
         image (Image.Image): The input image.
-        opacity (float): The desired opacity, ranging from 0.0 (transparent) to 1.0 (opaque).
+        opacity (float): Desired opacity (0.0 to 1.0).
+        color (Optional[tuple[int, int, int]]): RGB tint to apply.
 
     Returns:
-        Image.Image: The image with adjusted opacity.
+        Image.Image: The adjusted watermark image.
     """
-    # Ensure the image has an alpha channel
     image_rgba: Image = image.convert("RGBA")
 
-    # Extract the alpha channel
-    alpha = image_rgba.split()[3]
+    if color is not None:
+        r, g, b, alpha = image_rgba.split()
+        solid_color = PILImage.new("RGBA", image_rgba.size, color + (0,))
+        solid_color.putalpha(alpha)
+        image_rgba = solid_color
 
-    # Adjust the opacity
-    alpha = alpha.point(lambda p: p * opacity)
+    r, g, b, a = image_rgba.split()
+    a = a.point(lambda p: int(p * opacity))
+    image_rgba.putalpha(a)
 
-    # Apply the adjusted alpha channel to the image
-    image_rgba.putalpha(alpha)
     return image_rgba
+
 
 def scale_watermark(
     target_image: Image,
@@ -48,19 +55,17 @@ def scale_watermark(
 
     # Resize the watermark
     resized_watermark = watermark_image.resize(
-        (target_watermark_width, target_watermark_height),
-        resample=Resampling.LANCZOS
+        (target_watermark_width, target_watermark_height), resample=Resampling.LANCZOS
     )
 
     return resized_watermark
 
 
-
 def calculate_position(
-        target_image: Image,
-        watermark_image: Image,
-        position: WatermarkPosition,
-        padding: int,
+    target_image: Image,
+    watermark_image: Image,
+    position: WatermarkPosition,
+    padding: int,
 ) -> tuple[int, int]:
     """Calculate the position to place the watermark on the target image.
 
@@ -98,4 +103,3 @@ def calculate_position(
             )
         case _:
             raise ValueError(f"Position {position} is not supported.")
-

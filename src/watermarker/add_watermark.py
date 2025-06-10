@@ -7,7 +7,11 @@ from PIL import Image
 
 from src.watermarker.click_enum_choice import EnumChoice
 from src.watermarker.enums import WatermarkPosition
-from src.watermarker.watermark_utils import adjust_opacity, calculate_position, scale_watermark
+from src.watermarker.watermark_utils import (
+    adjust_opacity,
+    calculate_position,
+    scale_watermark,
+)
 
 DEFAULT_OPACITY: Final[float] = 1.0
 """Opacity of the watermark applied to a image."""
@@ -45,7 +49,9 @@ def validate_image_and_watermark(
 
 
 @lru_cache(maxsize=1)
-def load_cached_watermark(watermark_path: Path, opacity: float) -> Image.Image:
+def load_cached_watermark(
+    watermark_path: Path, opacity: float, color: tuple[int, int, int] | None = None
+) -> Image.Image:
     """Load and cache the watermark image with the specified opacity.
 
     Args:
@@ -56,7 +62,7 @@ def load_cached_watermark(watermark_path: Path, opacity: float) -> Image.Image:
         Image.Image: The processed watermark image with adjusted opacity.
     """
     watermark_image = Image.open(watermark_path)
-    return adjust_opacity(image=watermark_image, opacity=opacity)
+    return adjust_opacity(image=watermark_image, opacity=opacity, color=color)
 
 
 def add_watermark(
@@ -67,6 +73,7 @@ def add_watermark(
     position: WatermarkPosition = WatermarkPosition.BOTTOM_RIGHT,
     padding: int = DEFAULT_PADDING,
     watermark_scale_ratio: float = DEFAULT_WATERMARK_SCALE_RATIO,
+    color: tuple[int, int, int] | None = None,
 ) -> None:
     """Add a watermark to the target image.
 
@@ -82,7 +89,9 @@ def add_watermark(
                  edges of the target image.
     """
     target_image: Image.Image = Image.open(target_image_path)
-    watermark_image: Image.Image = load_cached_watermark(watermark_image_path, opacity)
+    watermark_image: Image.Image = load_cached_watermark(
+        watermark_image_path, opacity, color
+    )
 
     # Validate image and watermark dimensions
     if not validate_image_and_watermark(target_image, watermark_image, padding):
@@ -94,7 +103,9 @@ def add_watermark(
         raise ValueError(f"Opacity value {opacity} is invalid.")
 
     # Scale the watermark
-    watermark_image = scale_watermark(target_image, watermark_image, scale_ratio=watermark_scale_ratio)
+    watermark_image = scale_watermark(
+        target_image, watermark_image, scale_ratio=watermark_scale_ratio
+    )
 
     # Calculate the position for the watermark
     position_x_y: tuple[int, int] = calculate_position(
@@ -132,6 +143,12 @@ def add_watermark(
     show_default=True,
 )
 @click.option("--padding", type=int, default=DEFAULT_PADDING, show_default=True)
+@click.option(
+    "--color",
+    type=str,
+    default=None,
+    help="Optional RGB color tint, e.g. '255,0,0' for red.",
+)
 def main(
     target_image_path: Path,
     watermark_image_path: Path,
@@ -139,6 +156,7 @@ def main(
     opacity: float,
     position: WatermarkPosition,
     padding: int,
+    color: str | None = None,
 ) -> None:
     """Add a watermark to an image.
 
@@ -153,10 +171,24 @@ def main(
         padding: The padding (in pixels) between the watermark and the
                  edges of the target image.
     """
+
+    color_tuple = None
+    if color:
+        try:
+            color_tuple = tuple(map(int, color.split(",")))
+            if len(color_tuple) != 3 or not all(0 <= c <= 255 for c in color_tuple):
+                raise ValueError()
+        except Exception:
+            raise click.BadParameter(
+                "Color must be in the format R,G,B with values between 0 and 255."
+            )
+
     # TODO: validate path inputs, if working with folders, ensure output path is a folder etc.
     if target_image_path.is_dir():
         for image_path in target_image_path.glob("*"):
-            watermarked_output_image_path = output_image_path / f"watermarked_{image_path.name}"
+            watermarked_output_image_path = (
+                output_image_path / f"watermarked_{image_path.name}"
+            )
             try:
                 add_watermark(
                     target_image_path=image_path,
@@ -166,6 +198,7 @@ def main(
                     position=position,
                     padding=padding,
                     watermark_scale_ratio=DEFAULT_WATERMARK_SCALE_RATIO,
+                    color=color_tuple,
                 )
                 click.echo(f"Watermark added to {image_path.name}")
             except ValueError as error:
@@ -180,6 +213,7 @@ def main(
                 position=position,
                 padding=padding,
                 watermark_scale_ratio=DEFAULT_WATERMARK_SCALE_RATIO,
+                color=color_tuple,
             )
         except ValueError as error:
             click.echo(f"Error: {error}")
